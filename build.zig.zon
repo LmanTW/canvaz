@@ -1,0 +1,17 @@
+.{
+    .name = "canvaz",
+    .version = "0.0.1",
+
+    .dependencies = .{
+        .zigimg = .{
+            .url = "https://github.com/zigimg/zigimg/archive/4c8ea54037b630712da9f615add05fca242165be.tar.gz",
+            .hash = "1220d19aa00426c787e21bf0b9878f66b9df94c778f6c820d2396015977c39d05870",
+        },
+    },
+
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon"
+    } 
+}
