@@ -14,17 +14,15 @@ const Canvaz = @This();
 
 // The main function :3
 pub fn main() !void {
-      var canvas = try Canvaz.init(512, 512, std.heap.page_allocator);
-      defer canvas.deinit();
-      
+      var canvas = try Canvaz.init(256, 256, std.heap.page_allocator);
+      defer canvas.deinit(); 
+
       var image = try Image.initFromFile("image.png", canvas.allocator);
       defer image.deinit();
 
-      try image.saveToFile("result.png");
-
       canvas.fill(Color.black);
-      canvas.drawShape(Shape.circle(0, 0, 512), Color.black);
-      canvas.drawImage(image, Shape.circle(0, 0, 512));
+      canvas.drawShape(Shape.roundedRectangle(0, 0, 256, 256, 256), Color.white);
+      canvas.drawImage(image, Shape.roundedRectangle(0, 0, 256, 256, 64));
       
       try canvas.saveToFile("canvas.png");
 }
