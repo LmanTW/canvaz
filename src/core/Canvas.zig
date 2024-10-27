@@ -1,8 +1,9 @@
+const zigimg = @import("zigimg");
 const std = @import("std");
 
-const Texture = @import("./Texture.zig");
 const Color = @import("./Color.zig");
 const Shape = @import("./Shape.zig");
+const Image = @import("./Image.zig");
 
 const Canvas = @This();
 
@@ -12,7 +13,7 @@ height: u16,
 allocator: std.mem.Allocator,
 pixels: []u8,
 
-// Initalize the canvas.
+// Initalize a canvas.
 pub fn init(width: u16, height: u16, allocator: std.mem.Allocator) !Canvas {
     const pixels = try allocator.alloc(u8, (@as(u64, @intCast(width)) * @as(u64, @intCast(height))) * 4);
 
@@ -35,13 +36,13 @@ pub fn deinit(self: *Canvas) void {
 // Get a pixel.
 pub fn get(self: *Canvas, x: i16, y: i16) ?Color {
     if ((x >= 0 and x < self.width) and (y >= 0 and y < self.height)) {
-        const index = (@as(u64, @intCast(x)) + (@as(u64, @intCast(y)) * @as(u64, @intCast(self.width)))) * 4;
+        const offset = (@as(u64, @intCast(x)) + (@as(u64, @intCast(y)) * @as(u64, @intCast(self.width)))) * 4;
 
         return Color{
-            .r = self.pixels[index],
-            .g = self.pixels[index + 1],
-            .b = self.pixels[index + 2],
-            .a = self.pixels[index + 3]
+            .r = self.pixels[offset],
+            .g = self.pixels[offset + 1],
+            .b = self.pixels[offset + 2],
+            .a = @as(f32, @floatFromInt(self.pixels[offset + 3])) / 255
         };
     }
 }
@@ -72,55 +73,108 @@ fn setByIndex(self: *Canvas, index: u64, color: Color) void {
     }
 }
 
-// Clear the canvas.
-pub fn clear(self: *Canvas, color: Color) void {
+// Fill the canvas.
+pub fn fill(self: *Canvas, color: Color) void {
     if (color.a < 1) {
         @memset(self.pixels, 0);
     }
 
     if (color.a > 0) {
-        var index = @as(u64, 0);
+        var offset = @as(u64, 0);
 
-        while (index < self.pixels.len) {
-            self.setByIndex(index, color);
+        while (offset < self.pixels.len) {
+            self.setByIndex(offset, color);
 
-            index += 4;
+            offset += 4;
         }
     }
 }
 
 // Draw a shape.
-pub fn draw(self: *Canvas, shape: Shape, color: Color) !void {
-    const bitmap = try shape.constructor(self.allocator);
+pub fn drawShape(self: *Canvas, shape: Shape, color: Color) void {
+    const bitmap = shape.getBitmap(self.allocator) catch {
+        return;
+    };
     defer self.allocator.free(bitmap);
 
-    var x = @as(i16, 0);
-    var y = @as(i16, 0);
-    const width = @as(i16, @intCast(shape.width));
-    const height = @as(i16, @intCast(shape.height));
+    const local_width = @as(i16, @intCast(shape.width));
+    const local_height = @as(i16, @intCast(shape.height));
+    var local_x = @as(i16, 0);
+    var local_y = @as(i16, 0);
 
-    while (x < width) {
-        while (y < height) {
-            const index = @as(u32, @intCast(x)) + (@as(u32, @intCast(y)) * shape.width);
+    while (local_x < local_width) {
+        while (local_y < local_height) {
+            const index = @as(u32, @intCast(local_x)) + (@as(u32, @intCast(local_y)) * shape.width);
 
             if (bitmap[index]) {
-                self.set(shape.x + x, shape.y + y, color);
+                self.set(shape.x + local_x, shape.y + local_y, color);
             }
 
-            y += 1;
+            local_y += 1;
         }
 
-        x += 1;
-        y = 0;
+        local_x += 1;
+        local_y = 0;
+    }
+}
+
+// Draw an image.
+pub fn drawImage(self: *Canvas, image: Image, shape: Shape) void {
+    const bitmap = shape.getBitmap(self.allocator) catch {
+        return;
+    };
+    defer self.allocator.free(bitmap);
+
+    const image_width_scale = @as(f32, @floatFromInt(image.width)) / @as(f32, @floatFromInt(shape.width));
+    const image_height_scale = @as(f32, @floatFromInt(image.height)) / @as(f32, @floatFromInt(shape.height));
+
+    const local_width = @as(i16, @intCast(shape.width));
+    const local_height = @as(i16, @intCast(shape.height));
+    var local_x = @as(i16, 0);
+    var local_y = @as(i16, 0);
+
+    while (local_x < local_width) {
+        while (local_y < local_height) {
+            const index = @as(u32, @intCast(local_x)) + (@as(u32, @intCast(local_y)) * shape.width);
+
+            if (bitmap[index]) {
+                const image_x = @as(u64, @intFromFloat(image_width_scale * @as(f32, @floatFromInt(local_x))));
+                const image_y = @as(u64, @intFromFloat(image_height_scale * @as(f32, @floatFromInt(local_y))));
+
+                const offset = (image_x + (image_y * @as(u64, @intCast(image.width)))) * 4;
+
+                self.set(shape.x + local_x, shape.y + local_y, .{
+                    .r = image.pixels[offset],
+                    .g = image.pixels[offset + 1],
+                    .b = image.pixels[offset + 2],
+                    .a = @as(f32, @floatFromInt(image.pixels[offset + 3])) / 255
+                });
+            }
+
+            local_y += 1;
+        }
+
+        local_x += 1;
+        local_y = 0;
     }
 }
 
 // Save the canvas to a file.
-pub fn save(self: *Canvas, file_path: []const u8) !void {
-    var texture = try Texture.init(self.width, self.height, self.allocator);
-    defer texture.deinit();
+pub fn saveToFile(self: *Canvas, file_path: []const u8) !void {
+    var image = Image{
+        .width = self.width,
+        .height = self.height,
 
-    std.mem.copyForwards(u8, texture.pixels, self.pixels);
+        .allocator = self.allocator,
+        .pixels = self.pixels
+    };
 
-    try texture.saveToFile(file_path);
+    try image.saveToFile(file_path);
 }
+
+// Fit type.
+const FitType = enum(u4) {
+    scale,
+    min,
+    max
+};
