@@ -58,8 +58,8 @@ pub fn roundRectangle(x: i16, y: i16, width: u16, height: u16, radius: u16) Shap
         }
 
         fn setCornerBitmap(bitmap: []bool, corner_x: u16, corner_y: u16, circle_x: u16, circle_y: u16) void {
-            var local_x = @as(f32, @floatFromInt(corner_x));
-            var local_y = @as(f32, @floatFromInt(corner_y));
+            var local_x = corner_x;
+            var local_y = corner_y;
 
             while (local_x < corner_x + closure_radius) {
                 while (local_y < corner_y + closure_radius) {
@@ -98,14 +98,14 @@ pub fn roundRectangle(x: i16, y: i16, width: u16, height: u16, radius: u16) Shap
 // Create a circle.
 pub fn circle(x: i16, y: i16, size: u16) Shape {
     const closure = opaque {
-        pub var closure_size = @as(u16, 0);
+        pub var closure_size = @as(f32, 0);
 
         pub fn getBitmap(allocator: std.mem.Allocator) error{OutOfMemory}![]bool {
-            const bitmap = try allocator.alloc(bool, @as(u32, @intCast(closure_size)) * @as(u32, @intCast(closure_size)));
+            const bitmap = try allocator.alloc(bool, @as(u32, @intFromFloat(closure_size)) * @as(u32, @intFromFloat(closure_size)));
 
             @memset(bitmap, false);
         
-            const radius = @as(f32, @floatFromInt(closure_size)) / 2;
+            const radius = closure_size / 2;
             var local_x = @as(f32, 0);
             var local_y = @as(f32, 0);
 
@@ -115,7 +115,7 @@ pub fn circle(x: i16, y: i16, size: u16) Shape {
                     const dy = radius - local_y;
 
                     if (std.math.sqrt((dx * dx) + (dy * dy)) < radius) {
-                        const index = @as(u32, @intFromFloat(local_x)) + (@as(u32, @intFromFloat(local_y)) * closure_size);
+                        const index = @as(u32, @intFromFloat(local_x)) + (@as(u32, @intFromFloat(local_y)) * @as(u32, @intFromFloat(closure_size)));
 
                         bitmap[index] = true;
                     }
@@ -131,7 +131,7 @@ pub fn circle(x: i16, y: i16, size: u16) Shape {
         }
     };
 
-    closure.closure_size = size;
+    closure.closure_size = @as(f32, @floatFromInt(size));
 
     return Shape{
         .x = x,

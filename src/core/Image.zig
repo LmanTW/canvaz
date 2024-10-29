@@ -1,6 +1,7 @@
 const zigimg = @import("zigimg");
 const std = @import("std");
 
+const Filter = @import("./Canvas.zig");
 const Color = @import("./Color.zig");
 
 const Image = @This();
@@ -11,7 +12,7 @@ height: u16,
 allocator: std.mem.Allocator,
 pixels: []u8,
 
-// Initialize the image.
+// Initialize an image.
 pub fn init(width: u16, height: u16, allocator: std.mem.Allocator) !Image {
     const pixels = try allocator.alloc(u8, (@as(u64, @intCast(width)) * @as(u64, @intCast(height))) * 4);
 
@@ -26,7 +27,7 @@ pub fn init(width: u16, height: u16, allocator: std.mem.Allocator) !Image {
     };
 }
 
-// Initialize the image from a file.
+// Initialize an image from a file.
 pub fn initFromFile(file_path: []const u8, allocator: std.mem.Allocator) !Image {
     const file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
@@ -39,14 +40,14 @@ pub fn initFromFile(file_path: []const u8, allocator: std.mem.Allocator) !Image 
    return initFromMemory(buffer, allocator);
 }
 
-// Initialize the image from the memory.
+// Initialize an image from the memory.
 pub fn initFromMemory(buffer: []const u8, allocator: std.mem.Allocator) !Image {
     var zimage = try zigimg.Image.fromMemory(allocator, buffer);
     defer zimage.deinit();
 
     try zimage.convert(.rgba32);
 
-    const pixels = try allocator.alloc(u8, (@as(u64, @intCast(zimage.width)) * @as(u64, @intCast(zimage.height))) * 4);
+    const pixels = try allocator.alloc(u8, (@as(u64, @intCast(zimage.width)) * zimage.height) * 4);
     std.mem.copyForwards(u8, pixels, zimage.pixels.asBytes());
 
     return Image{
@@ -58,27 +59,42 @@ pub fn initFromMemory(buffer: []const u8, allocator: std.mem.Allocator) !Image {
     };
 }
 
+// Initialize an image from another image.
+pub fn initFromImage(image: Image, allocator: std.mem.Allocator) !Image {
+    const pixels = try allocator.alloc(u8, image.pixels.len);
+
+    std.mem.copyForwards(u8, pixels, image.pixels);
+
+    return Image{
+        .width = image.width,
+        .height = image.height,
+
+        .allocator = allocator,
+        .pixels = pixels
+    };
+}
+
 // Deinitialize the image.
-pub fn deinit(self: *Image) void {
+pub fn deinit(self: *const Image) void {
     self.allocator.free(self.pixels);
 }
 
 // Scale the image.
 pub fn scale(self: *Image, width: u16, height: u16) !void {
-    const pixels = try self.allocator.alloc(u8, (@as(u64, @intCast(width)) * @as(u64, @intCast(height))) * 4);
+    const pixels = try self.allocator.alloc(u8, (@as(u64, @intCast(width)) * height) * 4);
 
     const width_scale = @as(f32, @floatFromInt(self.width)) / @as(f32, @floatFromInt(width));
     const height_scale = @as(f32, @floatFromInt(self.height)) / @as(f32, @floatFromInt(height)); 
-    var new_x = @as(f32, 0);
-    var new_y = @as(f32, 0);
+    var new_x = @as(u64, 0);
+    var new_y = @as(u64, 0);
 
     while (new_x < width) {
         while (new_y < height) {
-            const old_x = @as(u64, @intFromFloat(width_scale * new_x));
-            const old_y = @as(u64, @intFromFloat(height_scale * new_y));
+            const old_x = @as(u64, @intFromFloat(@as(f32, @floatFromInt(new_x)) * width_scale));
+            const old_y = @as(u64, @intFromFloat(@as(f32, @floatFromInt(new_y)) * height_scale));
 
-            const old_offset = (old_x + (old_y * @as(u64, @intCast(self.width)))) * 4;
-            const new_offset = (new_x + (new_y * @as(u64, @intCast(width)))) * 4;
+            const old_offset = (old_x + (old_y * self.width)) * 4;
+            const new_offset = (new_x + (new_y * width)) * 4;
 
             std.mem.copyForwards(u8, pixels[new_offset..new_offset + 4], self.pixels[old_offset..old_offset + 4]);
 
@@ -98,7 +114,7 @@ pub fn scale(self: *Image, width: u16, height: u16) !void {
 
 // Crop the image.
 pub fn crop(self: *Image, x: u16, y: u16, width: u16, height: u16) !void {
-    const pixels = try self.allocator.alloc(u8, (@as(u64, @intCast(width)) * @as(u64, @intCast(height))) * 4);
+    const pixels = try self.allocator.alloc(u8, (@as(u64, @intCast(width)) * height) * 4);
 
     const start_x = @min(x, self.width);
     const start_y = @min(y, self.height);
@@ -113,8 +129,8 @@ pub fn crop(self: *Image, x: u16, y: u16, width: u16, height: u16) !void {
             const new_x = old_x - start_x;
             const new_y = old_y - start_y;
 
-            const old_offset = (old_x + (old_y * @as(u64, @intCast(self.width)))) * 4;
-            const new_offset = (new_x + (new_y * @as(u64, @intCast(width)))) * 4;
+            const old_offset = (old_x + (old_y * self.width)) * 4;
+            const new_offset = (new_x + (new_y * width)) * 4;
 
             std.mem.copyForwards(u8, pixels[new_offset..new_offset + 4], self.pixels[old_offset..old_offset + 4]);
 
@@ -134,7 +150,7 @@ pub fn crop(self: *Image, x: u16, y: u16, width: u16, height: u16) !void {
 }
 
 // Save the image to a file.
-pub fn saveToFile(self: *Image, file_path: []const u8) !void {
+pub fn saveToFile(self: *const Image, file_path: []const u8) !void {
     var zimage = try zigimg.Image.fromRawPixels(self.allocator, self.width, self.height, self.pixels, .rgba32);
     defer zimage.deinit();
 

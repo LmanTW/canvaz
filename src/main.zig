@@ -1,6 +1,7 @@
 const std = @import("std");
 
 pub const Canvas = @import("./core/Canvas.zig");
+pub const Filter = @import("./core/Filter.zig");
 pub const Color = @import("./core/Color.zig");
 pub const Shape = @import("./core/Shape.zig");
 pub const Image = @import("./core/Image.zig");
@@ -14,15 +15,14 @@ const Canvaz = @This();
 
 // The main function :3
 pub fn main() !void {
-      var canvas = try Canvaz.init(256, 256, std.heap.page_allocator);
-      defer canvas.deinit(); 
-
-      var image = try Image.initFromFile("image.png", canvas.allocator);
-      defer image.deinit();
-
-      canvas.fill(Color.black);
-      canvas.drawShape(Shape.roundedRectangle(0, 0, 256, 256, 256), Color.white);
-      canvas.drawImage(image, Shape.roundedRectangle(0, 0, 256, 256, 64));
-      
-      try canvas.saveToFile("canvas.png");
+    const canvas = try Canvaz.init(512, 512, std.heap.page_allocator);
+    defer canvas.deinit();
+    
+    const image = try Image.initFromFile("image.png", canvas.allocator);
+    defer image.deinit();
+    
+    canvas.drawImage(image, Shape.roundRectangle(0, 0, 512, 512, 64));
+    canvas.drawFilter(Filter.posterize(0.5), Shape.circle(256, 256, 256).center());
+    
+    try canvas.saveToFile("canvas.png");
 }
