@@ -21,8 +21,8 @@ pub fn main() !void {
     const image = try Image.initFromFile("image.png", canvas.allocator);
     defer image.deinit();
     
-    canvas.drawImage(image, Shape.roundRectangle(0, 0, 512, 512, 64));
-    canvas.drawFilter(Filter.posterize(0.5), Shape.circle(256, 256, 256).center());
+    canvas.drawImage(image, Shape.roundRectangle(0, 0, 512, 512, 64), .cover);
+    // canvas.drawFilter(Filter.darken(0.5), Shape.circle(256, 256, 256).center());
     
     try canvas.saveToFile("canvas.png");
 }

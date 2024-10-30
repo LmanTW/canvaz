@@ -118,8 +118,8 @@ pub fn crop(self: *Image, x: u16, y: u16, width: u16, height: u16) !void {
 
     const start_x = @min(x, self.width);
     const start_y = @min(y, self.height);
-    const end_x = @min(x + width, self.width);
-    const end_y = @min(y + height, self.height);
+    const end_x = @min(start_x + width, self.width);
+    const end_y = @min(start_y + height, self.height);
 
     var old_x = @as(u16, start_x);
     var old_y = @as(u16, start_y);
@@ -129,8 +129,8 @@ pub fn crop(self: *Image, x: u16, y: u16, width: u16, height: u16) !void {
             const new_x = old_x - start_x;
             const new_y = old_y - start_y;
 
-            const old_offset = (old_x + (old_y * self.width)) * 4;
-            const new_offset = (new_x + (new_y * width)) * 4;
+            const old_offset = ((@as(u64, @intCast(old_y)) * self.width) + old_x) * 4;
+            const new_offset = ((@as(u64, @intCast(new_y)) * width) + new_x) * 4;
 
             std.mem.copyForwards(u8, pixels[new_offset..new_offset + 4], self.pixels[old_offset..old_offset + 4]);
 
@@ -148,6 +148,25 @@ pub fn crop(self: *Image, x: u16, y: u16, width: u16, height: u16) !void {
     self.allocator.free(self.pixels);
     self.pixels = pixels;
 }
+
+// Fit the image.
+pub fn fit(self: *Image, width: u16, height: u16, layout: Layout) !void {
+    switch (layout) {
+        .scale => try self.scale(width, height),
+        .cover => {
+            const ratio = @max(@as(f32, @floatFromInt(width)) / @as(f32, @floatFromInt(self.width)), @as(f32, @floatFromInt(height)) / @as(f32, @floatFromInt(self.height)));
+            const new_width = @as(u16, @intFromFloat(@round(@as(f32, @floatFromInt(self.width)) * ratio)));
+            const new_height = @as(u16, @intFromFloat(@round(@as(f32, @floatFromInt(self.height)) * ratio)));
+ 
+            try self.scale(new_width, new_height); 
+            try self.crop((new_width / 2) - (self.width / 2), (new_height / 2) - (self.height / 2), new_width, new_height);
+
+        }
+    }
+}
+
+// Layout.
+pub const Layout = enum(u4) { scale, cover };
 
 // Save the image to a file.
 pub fn saveToFile(self: *const Image, file_path: []const u8) !void {

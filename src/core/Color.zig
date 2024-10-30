@@ -43,9 +43,21 @@ pub fn posterize(self: *const Color, level: f32) Color {
     };
 }
 
-// Set the brightness the color.
-pub fn setBrightness(self: *const Color, level: f32) Color {
-    const normalize_level = @max(0, @min(2, level));
+// Brighten the color.
+pub fn brighten(self: *const Color, level: f32) Color {
+    const normalize_level = @max(1, @min(2, level + 1));
+
+    return Color{
+        .r = @as(u8, @intCast(@max(0, @min(255, @as(u16, @intFromFloat(@as(f32, @floatFromInt(self.r)) * normalize_level)))))),
+        .g = @as(u8, @intCast(@max(0, @min(255, @as(u16, @intFromFloat(@as(f32, @floatFromInt(self.g)) * normalize_level)))))),
+        .b = @as(u8, @intCast(@max(0, @min(255, @as(u16, @intFromFloat(@as(f32, @floatFromInt(self.b)) * normalize_level)))))),
+        .a = self.a
+    };
+}
+
+// Darken the color.
+pub fn darken(self: *const Color, level: f32) Color {
+    const normalize_level = @max(0, @min(1, level));
 
     return Color{
         .r = @as(u8, @intCast(@max(0, @min(255, @as(u16, @intFromFloat(@as(f32, @floatFromInt(self.r)) * normalize_level)))))),

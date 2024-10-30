@@ -120,14 +120,20 @@ pub fn drawShape(self: *const Canvas, shape: Shape, color: Color) void {
 }
 
 // Draw an image.
-pub fn drawImage(self: *const Canvas, image: Image, shape: Shape) void {
+pub fn drawImage(self: *const Canvas, image: Image, shape: Shape, layout: Image.Layout) void {
     const bitmap = shape.getBitmap(self.allocator) catch {
         return;
     };
     defer self.allocator.free(bitmap);
 
-    const image_width_scale = @as(f32, @floatFromInt(image.width)) / @as(f32, @floatFromInt(shape.width));
-    const image_height_scale = @as(f32, @floatFromInt(image.height)) / @as(f32, @floatFromInt(shape.height));
+    var new_image = Image.initFromImage(image, self.allocator) catch {
+        return;
+    };
+    defer new_image.deinit();
+
+    new_image.fit(shape.width, shape.height, layout) catch {
+        return;
+    };
 
     const local_width = @as(i16, @intCast(shape.width));
     const local_height = @as(i16, @intCast(shape.height));
@@ -139,16 +145,13 @@ pub fn drawImage(self: *const Canvas, image: Image, shape: Shape) void {
             const bitmap_index = @as(u32, @intCast(local_x)) + (@as(u32, @intCast(local_y)) * shape.width);
 
             if (bitmap[bitmap_index]) {
-                const image_x = @as(u64, @intFromFloat(image_width_scale * @as(f32, @floatFromInt(local_x))));
-                const image_y = @as(u64, @intFromFloat(image_height_scale * @as(f32, @floatFromInt(local_y))));
-
-                const pixel_offset = (image_x + (image_y * image.width)) * 4;
+                const pixel_offset = ((@as(u64, @intCast(local_y)) * new_image.width) + @as(u64, @intCast(local_x))) * 4;
 
                 self.set(@as(i32, @intCast(shape.x)) + local_x, @as(i32, @intCast(shape.y)) + local_y, .{
-                    .r = image.pixels[pixel_offset],
-                    .g = image.pixels[pixel_offset + 1],
-                    .b = image.pixels[pixel_offset + 2],
-                    .a = @as(f32, @floatFromInt(image.pixels[pixel_offset + 3])) / 255
+                    .r = new_image.pixels[pixel_offset],
+                    .g = new_image.pixels[pixel_offset + 1],
+                    .b = new_image.pixels[pixel_offset + 2],
+                    .a = @as(f32, @floatFromInt(new_image.pixels[pixel_offset + 3])) / 255
                 });
             }
 
@@ -235,10 +238,3 @@ pub fn saveToFile(self: *const Canvas, file_path: []const u8) !void {
 
     try image.saveToFile(file_path);
 }
-
-// Fit type.
-const FitType = enum(u4) {
-    scale,
-    min,
-    max
-};
