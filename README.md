@@ -30,7 +30,7 @@ pub fn main() !void {
 
 ## Installation
 
-1. Add Canvaz using the package manager.
+1. Add Canvaz using the Zig package manager.
 
 ```sh
 zig fetch --save "https://github.com/zigimg/zigimg/archive/[commit hash].tar.gz"
@@ -231,6 +231,9 @@ canvas.drawImage(image, canvaz.Shape.roundRectangle(0, 0, 512, 512, 64), .cover)
 </tr>
 
 </table>
+
+> [!NOTE]
+> Check out [zigimg](https://github.com/zigimg/zigimg) for the [supported formats](https://github.com/zigimg/zigimg).
 
 ### Filter
 

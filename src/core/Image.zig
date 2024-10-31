@@ -82,7 +82,9 @@ pub fn scale(self: *Image, width: u16, height: u16) !void {
             const old_offset = (old_x + (old_y * self.width)) * 4;
             const new_offset = (new_x + (new_y * width)) * 4;
 
-            std.mem.copyForwards(u8, pixels[new_offset..new_offset + 4], self.pixels[old_offset..old_offset + 4]);
+            if (self.pixels.len > 0) {
+                std.mem.copyForwards(u8, pixels[new_offset..new_offset + 4], self.pixels[old_offset..old_offset + 4]);
+            }
 
             new_y += 1;
         }
@@ -90,6 +92,12 @@ pub fn scale(self: *Image, width: u16, height: u16) !void {
         new_x += 1;
         new_y = 0;
     }
+
+    self.width = width;
+    self.height = height;
+
+    self.allocator.free(self.pixels);
+    self.pixels = pixels;
 }
 
 // Save the image to a file.

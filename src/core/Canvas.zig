@@ -72,9 +72,9 @@ fn setByOffset(self: *const Canvas, offset: u64, color: Color) void {
         self.pixels[offset + 2] = color.b;
         self.pixels[offset + 3] = @as(u8, @intFromFloat(@round(@min(255, color.a * 255))));
     } else if (color.a > 0) {
-        const red_distance = @as(f32, @floatFromInt(@as(i8, @intCast(color.r)) - @as(i8, @intCast(self.pixels[offset]))));
-        const green_distance = @as(f32, @floatFromInt(@as(i8, @intCast(color.g)) - @as(i8, @intCast(self.pixels[offset + 1]))));
-        const blue_distance = @as(f32, @floatFromInt(@as(i8, @intCast(color.b)) - @as(i8, @intCast(self.pixels[offset + 2]))));
+        const red_distance = @as(f32, @floatFromInt(@as(i9, @intCast(color.r)) - @as(i9, @intCast(self.pixels[offset]))));
+        const green_distance = @as(f32, @floatFromInt(@as(i9, @intCast(color.g)) - @as(i9, @intCast(self.pixels[offset + 1]))));
+        const blue_distance = @as(f32, @floatFromInt(@as(i9, @intCast(color.b)) - @as(i9, @intCast(self.pixels[offset + 2]))));
 
         const new_red = @as(f32, @floatFromInt(self.pixels[offset])) + (red_distance * color.a);
         const new_green = @as(f32, @floatFromInt(self.pixels[offset + 1])) + (green_distance * color.a);
@@ -136,10 +136,9 @@ pub fn drawShape(self: *const Canvas, shape: Shape, color: Color) void {
 
 // Draw an image.
 pub fn drawImage(self: *const Canvas, image: Image, shape: Shape, layout: ImageLayout) void {
-    const start_x = @min(@as(i32, @intCast(shape.x)), self.width);
-    const start_y = @min(@as(i32, @intCast(shape.y)), self.height);
-    const end_x = @min(start_x + shape.width, self.width);
-    const end_y = @min(start_y + shape.height, self.height);
+    if (image.width == 0 or image.height == 0) {
+        return;
+    }
 
     var image_width = @as(u16, 0);
     var image_height = @as(u16, 0);
@@ -166,6 +165,11 @@ pub fn drawImage(self: *const Canvas, image: Image, shape: Shape, layout: ImageL
 
     const image_width_scale = @as(f32, @floatFromInt(image.width)) / @as(f32, @floatFromInt(image_width));
     const image_height_scale = @as(f32, @floatFromInt(image.height)) / @as(f32, @floatFromInt(image_height));
+
+    const start_x = @min(@as(i32, @intCast(shape.x)), self.width);
+    const start_y = @min(@as(i32, @intCast(shape.y)), self.height);
+    const end_x = @min(start_x + shape.width, self.width);
+    const end_y = @min(start_y + shape.height, self.height);
 
     var global_x = start_x;
     var global_y = start_y;
