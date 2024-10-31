@@ -18,11 +18,12 @@ pub fn main() !void {
     const canvas = try canvaz.init(512, 512, std.heap.page_allocator);
     defer canvas.deinit();
 
-    const image = try Image.initFromFile("image.png", canvas.allocator);
+    const image = try canvaz.Image.initFromFile("image.png", canvas.allocator);
     defer image.deinit();
 
-    canvas.drawImage(image, Shape.circle(0, 0, 512), .cover);
-    canvas.drawFilter(Filter.posterize(0.15), Shape.circle(0, 0, 256));
+    canvas.drawShape(Shape.circle(0, 0, 512), canvaz.Color.black);
+    canvas.drawImage(image, Shape.roundRectangle(256, 256, 320, 320, 32).move(-0.5, -0.5), .cover);
+    canvas.drawFilter(Filter.posterize(0.15), Shape.rectangle(0, 0, 256, 512));
 
     try canvas.saveToFile("result.png");
 }

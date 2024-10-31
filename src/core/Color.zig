@@ -38,9 +38,9 @@ pub fn posterize(self: *const Color, level: f32) Color {
     const step = @max(0, @min(1, level)) * 255;
 
     return Color{
-        .r = @as(u8, @intFromFloat(@round(@as(f32, @floatFromInt(self.r)) / step) * step)),
-        .g = @as(u8, @intFromFloat(@round(@as(f32, @floatFromInt(self.g)) / step) * step)),
-        .b = @as(u8, @intFromFloat(@round(@as(f32, @floatFromInt(self.b)) / step) * step)),
+        .r = @as(u8, @intFromFloat(@floor(@as(f32, @floatFromInt(self.r)) / step) * step)),
+        .g = @as(u8, @intFromFloat(@floor(@as(f32, @floatFromInt(self.g)) / step) * step)),
+        .b = @as(u8, @intFromFloat(@floor(@as(f32, @floatFromInt(self.b)) / step) * step)),
         .a = self.a
     };
 }

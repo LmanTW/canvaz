@@ -98,6 +98,18 @@ pub fn circle(x: i16, y: i16, size: u16) Shape {
     };
 }
 
+// Move the shape.
+pub fn move(self: *const Shape, x_amount: f32, y_amount: f32) Shape {
+    return Shape{
+        .x = self.x + @as(i16, @intFromFloat((@as(f32, @floatFromInt(self.width)) * x_amount))),
+        .y = self.y + @as(i16, @intFromFloat((@as(f32, @floatFromInt(self.height)) * y_amount))),
+        .width = self.width,
+        .height = self.height,
+
+        .getPixel = self.getPixel
+    };
+}
+
 // Move the shape left.
 pub fn left(self: *const Shape, amount: f32) Shape {
     return Shape{

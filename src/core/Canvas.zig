@@ -197,8 +197,8 @@ pub fn drawImage(self: *const Canvas, image: Image, shape: Shape, layout: ImageL
 }
 
 pub const ImageLayout = enum(u4) {
-    scale,
-    cover
+    cover,
+    scale
 };
 
 // Draw a filter.
