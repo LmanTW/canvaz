@@ -7,25 +7,15 @@ y: i16,
 width: u16,
 height: u16,
 
-getBitmap: *const fn (allocator: std.mem.Allocator) error{OutOfMemory}![]bool,
+getPixel: *const fn (local_x: u16, local_y: u16) bool,
 
 // Create a rectangle.
 pub fn rectangle(x: i16, y: i16, width: u16, height: u16) Shape {
     const closure = opaque {
-        pub var closure_width = @as(u16, 0);
-        pub var closure_height = @as(u16, 0); 
-
-        pub fn getBitmap(allocator: std.mem.Allocator) error{OutOfMemory}![]bool {
-            const bitmap = try allocator.alloc(bool, @as(u32, @intCast(closure_width)) * @as(u32, @intCast(closure_height)));
-
-            @memset(bitmap, true);
-
-            return bitmap;
+        pub fn getPixel(_: u16, _: u16) bool {
+            return true;
         }
     };
-
-    closure.closure_width = width;
-    closure.closure_height = height;
 
     return Shape{
         .x = x,
@@ -33,7 +23,7 @@ pub fn rectangle(x: i16, y: i16, width: u16, height: u16) Shape {
         .width = width,
         .height = height,
 
-        .getBitmap = &closure.getBitmap
+        .getPixel = &closure.getPixel
     };
 }
 
@@ -44,40 +34,28 @@ pub fn roundRectangle(x: i16, y: i16, width: u16, height: u16, radius: u16) Shap
         pub var closure_height = @as(u16, 0);
         pub var closure_radius = @as(u16, 0);
 
-        pub fn getBitmap(allocator: std.mem.Allocator) error{OutOfMemory}![]bool {
-            const bitmap = try allocator.alloc(bool, @as(u32, @intCast(closure_width)) * @as(u32, @intCast(closure_height)));
+        pub fn getPixel(local_x: u16, local_y: u16) bool {
+            if (local_x < closure_radius and local_y < closure_radius) {
+                return getCornerPixel(local_x, local_y, closure_radius, closure_radius);
+            }
+            if (local_x > closure_width - closure_radius and local_y < closure_radius) {
+                return getCornerPixel(local_x, local_y, closure_width - closure_radius, closure_radius);
+            }
+            if (local_x < closure_radius and local_y > closure_height - closure_radius) {
+                return getCornerPixel(local_x, local_y, closure_radius, closure_height - closure_radius);
+            }
+            if (local_x > closure_width - closure_radius and local_y > closure_height - closure_radius) {
+                return getCornerPixel(local_x, local_y, closure_width - closure_radius, closure_height - closure_radius);
+            }
 
-            @memset(bitmap, true);
-
-            setCornerBitmap(bitmap, 0, 0, closure_radius, closure_radius);
-            setCornerBitmap(bitmap, closure_width - closure_radius, 0, closure_width - closure_radius, closure_radius);
-            setCornerBitmap(bitmap, 0, closure_height - closure_radius, closure_radius, closure_height - closure_radius);
-            setCornerBitmap(bitmap, closure_width - closure_radius, closure_height - closure_radius, closure_width - closure_radius, closure_height - closure_radius);
-
-            return bitmap;
+            return true;
         }
 
-        fn setCornerBitmap(bitmap: []bool, corner_x: u16, corner_y: u16, circle_x: u16, circle_y: u16) void {
-            var local_x = corner_x;
-            var local_y = corner_y;
+        fn getCornerPixel(local_x: u16, local_y: u16, circle_x: u16, circle_y: u16) bool {
+            const dx = @as(f32, @floatFromInt(circle_x)) - @as(f32, @floatFromInt(local_x));
+            const dy = @as(f32, @floatFromInt(circle_y)) - @as(f32, @floatFromInt(local_y));
 
-            while (local_x < corner_x + closure_radius) {
-                while (local_y < corner_y + closure_radius) {
-                    const dx = @as(f32, @floatFromInt(circle_x)) - @as(f32, @floatFromInt(local_x));
-                    const dy = @as(f32, @floatFromInt(circle_y)) - @as(f32, @floatFromInt(local_y));
-
-                    if (std.math.sqrt((dx * dx) + (dy * dy)) > @as(f32, @floatFromInt(closure_radius))) {
-                        const index = @as(u32, @intCast(local_x)) + (@as(u32, @intCast(local_y)) * closure_width);
-
-                        bitmap[index] = false;
-                    }
-
-                    local_y += 1;
-                }
-
-                local_x += 1;
-                local_y = corner_y;
-            }
+            return std.math.sqrt((dx * dx) + (dy * dy)) < @as(f32, @floatFromInt(closure_radius));
         }
     };
 
@@ -91,47 +69,24 @@ pub fn roundRectangle(x: i16, y: i16, width: u16, height: u16, radius: u16) Shap
         .width = width,
         .height = height,
 
-        .getBitmap = &closure.getBitmap
+        .getPixel = &closure.getPixel
     };
 }
 
 // Create a circle.
 pub fn circle(x: i16, y: i16, size: u16) Shape {
     const closure = opaque {
-        pub var closure_size = @as(f32, 0);
+        pub var closure_radius = @as(f32, 0);
 
-        pub fn getBitmap(allocator: std.mem.Allocator) error{OutOfMemory}![]bool {
-            const bitmap = try allocator.alloc(bool, @as(u32, @intFromFloat(closure_size)) * @as(u32, @intFromFloat(closure_size)));
+        pub fn getPixel(local_x: u16, local_y: u16) bool {
+            const dx = closure_radius - @as(f32, @floatFromInt(local_x));
+            const dy = closure_radius - @as(f32, @floatFromInt(local_y));
 
-            @memset(bitmap, false);
-        
-            const radius = closure_size / 2;
-            var local_x = @as(f32, 0);
-            var local_y = @as(f32, 0);
-
-            while (local_x < closure_size) {
-                while (local_y < closure_size) {
-                    const dx = radius - local_x;
-                    const dy = radius - local_y;
-
-                    if (std.math.sqrt((dx * dx) + (dy * dy)) < radius) {
-                        const index = @as(u32, @intFromFloat(local_x)) + (@as(u32, @intFromFloat(local_y)) * @as(u32, @intFromFloat(closure_size)));
-
-                        bitmap[index] = true;
-                    }
-
-                    local_y += 1;
-                }
-
-                local_x += 1;
-                local_y = 0;
-            }
-
-            return bitmap;
+            return std.math.sqrt((dx * dx) + (dy * dy)) < closure_radius;
         }
     };
 
-    closure.closure_size = @as(f32, @floatFromInt(size));
+    closure.closure_radius = @as(f32, @floatFromInt(size)) / 2;
 
     return Shape{
         .x = x,
@@ -139,68 +94,54 @@ pub fn circle(x: i16, y: i16, size: u16) Shape {
         .width = size,
         .height = size,
 
-        .getBitmap = closure.getBitmap
+        .getPixel = &closure.getPixel
     };
 }
 
-// Center the shape.
-pub fn center(self: *const Shape) Shape {
+// Move the shape left.
+pub fn left(self: *const Shape, amount: f32) Shape {
     return Shape{
-        .x = self.x - @divTrunc(@as(i16, @intCast(self.width)), 2),
-        .y = self.y - @divTrunc(@as(i16, @intCast(self.height)), 2),
+        .x = self.x - @as(i16, @intFromFloat((@as(f32, @floatFromInt(self.width)) * amount))),
+        .y = self.y,
         .width = self.width,
         .height = self.height,
 
-        .getBitmap = self.getBitmap
+        .getPixel = self.getPixel
     };
 }
 
-// Create a new shape base on the intersect to another shape.
-//pub fn intersect(self: *const Shape, shape: Shape) Shape {
-//    const Closure = struct {
-//        fn getBitmap (allocator: std.mem.Allocator) ![]bool {
-//            const shape1_bitmap = try self.getBitmap(allocator);
-//            const shape2_bitmap = try shape.getBitmap(allocator);
-//
-//            const bitmap = try allocator.alloc(bool, shape1_bitmap.len);
-//
-//            const shape1_width = @as(i16, @intCast(self.width));
-//            const shape1_height = @as(i16, @intCast(self.height));
-//            const shape2_width = @as(i16, @intCast(shape.width));
-//            const shape2_height = @as(i16, @intCast(shape.height));
-//
-//            var global_x = self.x;
-//            var global_y = self.y;
-//
-//            while (global_x < self.x + shape1_width) {
-//                while (global_y < self.y + shape1_height) {
-//                    const self_index = @as(u32, @intCast(global_x - self.x)) + ((@as(u32, @intCast(global_y - self.y))) * @as(u32, @intCast(self.width)));
-//
-//                    if ((global_x >= shape.x and global_x < shape.x + shape2_width) and (global_y >= shape.y and global_y < shape.y + shape2_height)) {
-//                        const shape_index = @as(u32, @intCast(global_x - shape.x)) + ((@as(u32, @intCast(global_y - shape.y))) * @as(u32, @intCast(shape.width)));
-//
-//                        bitmap[self_index] = shape1_bitmap[self_index] and shape2_bitmap[shape_index];
-//                    } else {
-//                        bitmap[self_index] = false;
-//                    }
-//
-//                    global_y += 1;
-//                }
-//
-//                global_x += 1;
-//                global_y = self.y;
-//            }
-//
-//            return bitmap;
-//        }
-//    };
-//
-//    return Shape{
-//        .x = self.x,
-//        .y = self.y,
-//        .width = self.width,
-//        .height = self.height,
-//
-//        .getBitmap = Closure.getBitmap
-//    };
-//}
+// Move the shape right.
+pub fn right(self: *const Shape, amount: f32) Shape {
+    return Shape{
+        .x = self.x + @as(i16, @intFromFloat((@as(f32, @floatFromInt(self.width)) * amount))),
+        .y = self.y,
+        .width = self.width,
+        .height = self.height,
+
+        .getPixel = self.getPixel
+    };
+}
+
+// Move the shape up.
+pub fn up(self: *const Shape, amount: f32) Shape {
+    return Shape{
+        .x = self.x,
+        .y = self.y - @as(i16, @intFromFloat((@as(f32, @floatFromInt(self.height)) * amount))),
+        .width = self.width,
+        .height = self.height,
+
+        .getPixel = self.getPixel
+    };
+}
+
+// Move the shape down.
+pub fn down(self: *const Shape, amount: f32) Shape {
+    return Shape{
+        .x = self.x,
+        .y = self.y + @as(i16, @intFromFloat((@as(f32, @floatFromInt(self.height)) * amount))),
+        .width = self.width,
+        .height = self.height,
+
+        .getPixel = self.getPixel
+    };
+}

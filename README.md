@@ -2,9 +2,6 @@
 
 A simple, easy-to-use image processing library written entirely in Zig.
 
-> [!WARNING]
-> Still in very early development.
-
 ## Installation
 
 1. Add Canvaz using the package manager.
@@ -23,3 +20,6 @@ const canvaz = b.dependency("canvaz", .{
 
 exe.root_module.addImport("canvaz", canvaz.module("canvaz"));
 ```
+
+> [!WARNING]
+> Canvaz uses [zigimg](https://github.com/zigimg/zigimg) which uses the nominated [2024.10.0-mach](https://machengine.org/about/nominated-zig/) version of Zig.

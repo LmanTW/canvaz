@@ -11,18 +11,18 @@ pub fn init(width: u16, height: u16, allocator: std.mem.Allocator) !Canvas {
     return try Canvas.init(width, height, allocator);
 }
 
-const Canvaz = @This();
+const canvaz = @This();
 
 // The main function :3
 pub fn main() !void {
-    const canvas = try Canvaz.init(512, 512, std.heap.page_allocator);
+    const canvas = try canvaz.init(512, 512, std.heap.page_allocator);
     defer canvas.deinit();
-    
+
     const image = try Image.initFromFile("image.png", canvas.allocator);
     defer image.deinit();
-    
-    canvas.drawImage(image, Shape.roundRectangle(0, 0, 512, 512, 64), .cover);
-    // canvas.drawFilter(Filter.darken(0.5), Shape.circle(256, 256, 256).center());
-    
-    try canvas.saveToFile("canvas.png");
+
+    canvas.drawImage(image, Shape.circle(0, 0, 512), .cover);
+    canvas.drawFilter(Filter.posterize(0.15), Shape.circle(0, 0, 256));
+
+    try canvas.saveToFile("result.png");
 }
