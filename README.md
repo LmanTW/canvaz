@@ -50,63 +50,208 @@ exe.root_module.addImport("canvaz", canvaz.module("canvaz"));
 > [!WARNING]
 > Canvaz uses [zigimg](https://github.com/zigimg/zigimg) which uses the nominated [2024.10.0-mach](https://machengine.org/about/nominated-zig/) version of Zig.
 
-## API Documentation
+# Guide
 
-Canvaz is designed to be simple and easy-to-use while still offering the capability for advanced graphics processing. As a result, you can easily perform image and filter masking in Canvaz.
+Canvaz is designed to be simple and easy-to-use while still offering the capability for advanced more graphics processing. As a result, you can easily perform image and filter masking in Canvaz.
 
-### Creating and moving a shape.
+### Canvas
 
+<table>
+
+<tr>
+  <td>Initialize and saving a canvas.</td>
+  <td>Clearing and filling the canvas.</td>
+</tr>
+  
+<tr>
+<td>
+    
 ```zig
-const Shape = canvaz.Shape;
-
-// You can create a shape and assign it to an variable.
-const rectangle = Shape.rectangle(0, 0, 255, 255);
-
-// Move the shape relatively by its size.
-rectangle.move(-0.5, -0.5);
-rectangle.left(0.5);
-rectangle.right(0.5);
-rectangle.up(0.5);
-rectangle.down(-0.5);
-
-// Note: Operations these return a new shape.
-// Note: It's better if just use it inline.
-
-Shape.rectangle(0, 0, 255, 255).move(-0.5, -0.5)
-```
-
-### Drawing a shape.
-
-```zig
-const Color = canvaz.Color;
-const Shape = canvaz.Shape;
-
 const canvas = try canvaz.init(512, 512, std.heap.page_allocator);
 defer canvas.deinit();
 
-canvas.drawShape(Shape.rectangle(0, 0, 512, 512), Color.black);
-canvas.drawShape(Shape.circle(256, 256, 64).move(-0.5, -0.5), Color.white);
-
-// Note: Circle is not centered by default, so we need to center it manually.
-
-try canvas.saveToFile("result.png");
+// Save the canvas to a file.
+canvas.saveToFile("result.png")
 ```
-
-### Drawing an image.
+  
+</td>
+<td>
 
 ```zig
-const Shape = canvaz.Shape;
+// Clear the canvas.
+canvas.clear();
 
-pub fn main() !void {
-    const canvas = try canvaz.init(512, 512, std.heap.page_allocator);
-    defer canvas.deinit();
-
-    const image = try canvaz.Image.initFromFile("image.png");
-    defer image.deinit();
-
-    canvas.drawImage(image, Shape.rectangle(0, 0, 512, 512), .cover);
-    canvas.drawImage(image, Shape.circle(256, 256, 64).move(-0.5, -0.5), .scale);
-        
-    try canvas.saveToFile("result.png");
-}
+// Fill the canvas with a color.
+canvas.fill(canvaz.Color.black)
 ```
+
+</td>
+</tr>
+
+</table>
+
+### Color
+
+<table>
+
+<tr>
+  <td>Initialize a color.</td>
+  <td>Modifing the color.</td>
+</tr>
+  
+<tr>
+<td>
+    
+```zig
+// Initialize a color from RGBA.
+canvaz.Color.init(247, 164, 29, 1);
+
+// Initialize a color from Hex.
+canvaz.Color.initFromHex("#F7A41D");
+```
+  
+</td>
+<td>
+    
+```zig
+const color = canvaz.Color.init(247, 164, 29, 1);
+
+// Modify the color.
+_ = canvaz.Color.posterize(0.25);
+
+// Note: These methods return a new color, so it's better to use them inline.
+```
+  
+</td>
+</tr>
+
+</table>
+
+### Shape
+
+<table>
+
+<tr>
+  <td>Initialize a shape.</td>
+  <td>Moving the shape.</td>
+  <td>Drawing the shape.</td>
+</tr>
+  
+<tr>
+<td>
+    
+```zig
+// Initialize a shape.
+_ = canvaz.Shape.rectangle(0, 0, 256, 256);
+_ = canvaz.Shape.roundRectangle(0, 0, 256, 256, 64);
+_ = canvaz.Shape.roundRectangle(0, 0, 256);
+```
+  
+</td>
+<td>
+    
+```zig
+const rectangle = canvaz.Shape.rectangle(0, 0, 256, 256);
+
+// Move the shape relatively by its size.
+_ = rectangle.move(-0.5, -0.5);
+_ = rectangle.left(0.5);
+_ = rectangle.right(0.5);
+_ = rectangle.up(0.5);
+_ = rectangle.down(-0.5);
+
+// Note: These methods return a new shape, so it's better to use them inline.
+```
+  
+</td>
+<td>
+    
+```zig
+const canvas = try canvaz.init(512, 512, std.heap.page_allocator);
+defer canvas.deinit();
+
+// Draw a centered circle.
+canvas.drawShape(canvaz.Shape.circle(256, 256, 512).move(-0.5, -0.5), canvaz.Color.white);
+```
+  
+</td>
+</tr>
+
+</table>
+
+### Image
+
+<table>
+
+<tr>
+  <td>Initialize an image.</td>
+  <td>Scaling the image.</td>
+  <td>Drawing the image.</td>
+</tr>
+  
+<tr>
+<td>
+    
+```zig
+// Initialize an image from a file.
+const image_file = try canvaz.Image.initFromFile("image.png", std.heap.page_allocator);
+defer image_file.deinit();
+
+// Initialize an image from the memory.
+const image_memory = try canvaz.Image.initFromFile(<buffer>, std.heap.page_allocator);
+defer image_memory.deinit();
+```
+  
+</td>
+<td>
+    
+```zig
+var image = try canvaz.Image.initFromFile("image.png", std.heap.page_allocator);
+defer image.deinit();
+
+// Scale the image.
+try image.scale(64, 64);
+```
+  
+</td>
+<td>
+    
+```zig
+const canvas = try canvaz.init(512, 512, std.heap.page_allocator);
+defer canvas.deinit();
+
+const image = try canvaz.Image.initFromFile("image.png", std.heap.page_allocator);
+defer image.deinit();
+
+// Draw the image with a rounded rectangle mask.
+canvas.drawImage(image, canvaz.Shape.roundRectangle(0, 0, 512, 512, 64), .cover);
+```
+  
+</td>
+</tr>
+
+</table>
+
+### Filter
+
+<table>
+
+<tr>
+  <td>Drawing the filter.</td>
+</tr>
+  
+<tr>
+<td>
+    
+```zig
+const canvas = try canvaz.init(512, 512, std.heap.page_allocator);
+defer canvas.deinit();
+
+// Draw a filter with a circle mask.
+canvas.drawFilter(canvaz.Filter.brighten(0.5), canvaz.Shape.circle(0, 0, 512));
+```
+  
+</td> 
+</tr>
+
+</table>
