@@ -3,7 +3,7 @@
 A simple, easy-to-use image processing library written entirely in Zig.
 
 > [!NOTE]
-> Canvaz is still in early development, so breaking changes might get introduced.
+> Canvaz is still in early development and is halted. I might revisit this project after I'm more experienced with Zig.
 
 ## Example
 
